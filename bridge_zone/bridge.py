@@ -15,12 +15,8 @@ def sendInitData(zone, data):
     pass
 
 
-def getSlotDataByZone(zone, uri):
-    if zone < 0 or zone is None:
-        print(f"Error: zone is {zone} but it should be greater not None and greater than zero")
-
-    # http://melis.prato.grimos.dev/parking/{zone}/
-    uri += zone
+def getSlotData(uri):
+    # http://melis.prato.grimos.dev/parking/
     session = Http.getSession()
     header = {
         'Content-Type': 'application/json'
@@ -30,10 +26,10 @@ def getSlotDataByZone(zone, uri):
         print(f"Error: {response.status_code} - {response.text}")
         return None
     else:
-        data = response.json()
+        data = response.json().to_dict()
         print('Data:')
-        for key, value in data.items():
-            print(f'{key}: {value}\n')
+        for value in data:
+            print(f'{value}\n')
         return data
 
 def handleMessage():
@@ -47,30 +43,10 @@ def loop():
 
 
 def startBridge():
-    initList = [False for i in range(0, 255)]
+    data = getSlotData('http://melis.prato.grimos.dev/parking/')
 
-    """"
-    we will stay in this loop until all the microcontrollers have contacted the bridge
-    """
-    while initList.count(False) > 0:
-        # if channel.available > 0
-        # suppose we riceved a dictionary from microcontroller
-        data = {
-            'head': {
-                'start': 0xff,
-                'type': 0xAA,  # stands for initialization request packet
-                'size': 1,
-            },
-            'zone': 0,
-            'end': 0xFE
-        }
-
-        if data['head']['type'] == 0xAA:
-            zone = data['zone']
-            if zone and not initList[zone]:
-                data = getSlotDataByZone(zone, url='http://esempio.com')
-                if sendInitData(zone, data):
-                    initList[zone] = True
+    # TODO: mandare i dati a tutti i microcontrollori
+    pass
 
 
 
@@ -83,7 +59,6 @@ def setup():
 
 
 if __name__ == '__main__':
-    getSlotDataByZone('http://')
     setup()
     startBridge()
     loop()
