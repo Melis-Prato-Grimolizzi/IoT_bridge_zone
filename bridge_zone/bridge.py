@@ -15,14 +15,17 @@ def sendInitData(zone, data):
     pass
 
 
-def fetchInitData(zone, url):
+def getSlotDataByZone(zone, uri):
     if zone < 0 or zone is None:
         print(f"Error: zone is {zone} but it should be greater not None and greater than zero")
 
     # http://melis.prato.grimos.dev/parking/{zone}/
-    url += zone
+    uri += zone
     session = Http.getSession()
-    response = session.get(url)
+    header = {
+        'Content-Type': 'application/json'
+    }
+    response = session.get(uri, headers=header)
     if response.status_code != 200:
         print(f"Error: {response.status_code} - {response.text}")
         return None
@@ -65,7 +68,7 @@ def startBridge():
         if data['head']['type'] == 0xAA:
             zone = data['zone']
             if zone and not initList[zone]:
-                data = fetchInitData(zone, url='http://esempio.com')
+                data = getSlotDataByZone(zone, url='http://esempio.com')
                 if sendInitData(zone, data):
                     initList[zone] = True
 
@@ -80,6 +83,7 @@ def setup():
 
 
 if __name__ == '__main__':
+    getSlotDataByZone('http://')
     setup()
     startBridge()
     loop()
