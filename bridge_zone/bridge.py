@@ -73,23 +73,39 @@ class Bridge:
             msg = bytearray()
             msg.append(0xFF)
             msg.append(len(slot))
-            print(i)
+            #print(i)
             for elem in slot:
-                msg.extend(bytearray(struct.pack("f", elem)))
-                print(elem)
+                #print(elem)
+                if isinstance(elem, float):
+                    msg.extend(struct.pack('f', elem))
+                else:
+                    msg.append(elem)
             msg.append(0xFE)
+            time.sleep(0.02)
             self.ser.write(msg)
             print(msg)
-            break
+
         print('Finito!')
 
     def loop(self):
         buffer = []
         while True:
             if self.ser.in_waiting > 0:
-                data = self.ser.read(4)
-                myFloat = struct.unpack("f", data)[0]
-                print("Float ricevuto:", myFloat)
+                time.sleep(0.01)
+                id = self.ser.read()
+                print('ID: ', id[0])
+                zone = self.ser.read()
+                print('Zone: ', zone[0])
+                if self.ser.in_waiting >= 4:
+                    lat_data = self.ser.read(4)  # Legge i 4 byte per lat
+                    lat = struct.unpack('<f', lat_data)[0]  # Decodifica in float
+                    print('Lat: ', lat)
+                if self.ser.in_waiting >= 4:
+                    lon_data = self.ser.read(4)  # Legge i 4 byte per lon
+                    lon = struct.unpack('<f', lon_data)[0]  # Decodifica in float
+                    print('Lon: ', lon)
+                error = self.ser.read()
+                print('CODE: ', error[0])
 
 
 if __name__ == '__main__':
