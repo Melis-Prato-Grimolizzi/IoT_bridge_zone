@@ -144,12 +144,55 @@ class Bridge:
         response = session.get('http://localhost:3000/users/verify', headers=header)
         print(response.text)
 
+
+    def addSlotTest(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        data = {
+            'zone': 1,
+            'latitude': 43.9,
+            'longitude': 11.1
+        }
+        response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+        print(response.text)
+
+
+    def addSlotList(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        for slot in self.slots:
+            data = {
+                'zone': slot[0], # zone
+                'latitude': slot[2], # latitude
+                'longitude': slot[3] # longitude
+            }
+            response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+            print(response.text)
+
+
+    def updateSlotState(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        park_id = 2
+        url = 'http://localhost:3000/slots/update_slot_state/' + str(park_id)
+        response = session.post(url, headers=header)
+        print(response.text)
+
 if __name__ == '__main__':
     br = Bridge()
     #br.getUser()
     #br.createBridgeUser()
     br.bridgeLoginSerice()
     br.verifyBridgeService()
+    #br.addSlotList()
+    br.updateSlotState()
+    #br.addSlot()
     #br.sendData()
     #br.loop()
     br.ser.close()
