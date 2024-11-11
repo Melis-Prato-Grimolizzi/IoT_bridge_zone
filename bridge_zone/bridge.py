@@ -1,12 +1,14 @@
 # from SX127x.LoRa import LoRa
 import json
 
+import SessionHTTP
 import SessionHTTP as Http
 import serial
 import configparser
 import serial.tools.list_ports
 import struct
 import time
+import requests
 
 
 class Bridge:
@@ -17,6 +19,8 @@ class Bridge:
         self.slots = None
         self.ser = serial.Serial()
         self.port_name = None
+
+        self.bearer = None
 
         self.setupSerial()
         self.getFakeData()
@@ -73,9 +77,7 @@ class Bridge:
             msg = bytearray()
             msg.append(0xFF)
             msg.append(len(slot))
-            #print(i)
             for elem in slot:
-                #print(elem)
                 if isinstance(elem, float):
                     msg.extend(struct.pack('f', elem))
                 else:
@@ -88,7 +90,6 @@ class Bridge:
         print('Finito!')
 
     def loop(self):
-        buffer = []
         while True:
             if self.ser.in_waiting > 0:
                 time.sleep(0.01)
@@ -108,8 +109,47 @@ class Bridge:
                 print('CODE: ', error[0])
 
 
+    def getUser(self):
+        session = SessionHTTP.getSession()
+        response = session.get('http://localhost:3000/users/')
+
+
+    def createBridgeUser(self):
+        session = SessionHTTP.getSession()
+        body = {
+            'username': 'bridge',
+            'password': 'qwertyui'
+        }
+        response = session.post('http://localhost:3000/users/signup', data=body)
+        print(response.text)
+
+
+    def bridgeLoginSerice(self):
+        session = SessionHTTP.getSession()
+        data = {
+            'username': 'bridge',
+            'password': 'qwertyui'
+        }
+        response = session.post('http://localhost:3000/users/login', data=data)
+        self.bearer = 'Bearer ' + response.text
+        print(response.text)
+        print(self.bearer)
+
+
+    def verifyBridgeService(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        response = session.get('http://localhost:3000/users/verify', headers=header)
+        print(response.text)
+
 if __name__ == '__main__':
     br = Bridge()
-    br.sendData()
-    br.loop()
+    #br.getUser()
+    #br.createBridgeUser()
+    br.bridgeLoginSerice()
+    br.verifyBridgeService()
+    #br.sendData()
+    #br.loop()
     br.ser.close()
