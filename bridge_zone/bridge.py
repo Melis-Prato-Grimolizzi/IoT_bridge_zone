@@ -23,6 +23,92 @@ class Bridge:
         self.setupSerial()
         self.getFakeData()
 
+    def getUser(self):
+        session = SessionHTTP.getSession()
+        response = session.get('http://localhost:3000/users/')
+        print(response.text)
+
+
+    def createBridgeUser(self):
+        session = SessionHTTP.getSession()
+        body = {
+            'username': 'bridge',
+            'password': 'qwertyui'
+        }
+        response = session.post('http://localhost:3000/users/signup', data=body)
+        print(response.text)
+
+    def bridgeLoginSerice(self):
+        session = SessionHTTP.getSession()
+        data = {
+            'username': 'bridge',
+            'password': 'password'
+        }
+        response = session.post('http://localhost:3000/users/login', data=data)
+        self.bearer = 'Bearer ' + response.text
+        print(response.text)
+        print(self.bearer)
+
+    def verifyBridgeService(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        response = session.get('http://localhost:3000/users/verify', headers=header)
+        print(response.text)
+
+    def addSlotTest(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        data = {
+            'zone': 1,
+            'latitude': 43.9,
+            'longitude': 11.1
+        }
+        response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+        print(response.text)
+
+    def addSlotList(self):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        for slot in self.slots:
+            data = {
+                'zone': slot[0],  # zone
+                'latitude': slot[2],  # latitude
+                'longitude': slot[3], # longitude
+                'parking_id': slot[1]  # parking_id
+            }
+            response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+            print(response.text)
+
+    def updateSlotState(self, park_id):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        url = 'http://localhost:3000/slots/update_slot_state/' + str(park_id)
+        response = session.post(url, headers=header)
+        print(response.text)
+
+    def deleteSlot(self, park_id):
+        session = SessionHTTP.getSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        url = 'http://localhost:3000/slots/delete_slot/' + str(park_id)
+        response = session.delete(url, headers=header)
+        print(response.text)
+
+    def getSlotState(self, park_id):
+        session = SessionHTTP.getSession()
+        url = 'http://localhost:3000/slots/get_slot_state/' + str(park_id)
+        response = session.get(url)
+        print(response.text)
+
     def getFakeData(self):
         with open('slot.json', 'r') as file:
             self.slots = json.load(file)
@@ -89,6 +175,13 @@ class Bridge:
     def loop(self):
         while True:
             if self.ser.in_waiting > 0:
+                time.sleep(0.1)
+                id = self.ser.read()
+                id_int = int.from_bytes(id)
+                print(f'ID: {id_int}\n')
+                print('Entrato')
+                self.updateSlotState(id_int)
+                '''
                 time.sleep(0.01)
                 id = self.ser.read()
                 print('ID: ', id[0])
@@ -104,108 +197,22 @@ class Bridge:
                     print('Lon: ', lon)
                 error = self.ser.read()
                 print('CODE: ', error[0])
+                '''
 
-
-    def getUser(self):
-        session = SessionHTTP.getSession()
-        response = session.get('http://localhost:3000/users/')
-        print(response.text)
-
-
-    def createBridgeUser(self):
-        session = SessionHTTP.getSession()
-        body = {
-            'username': 'bridge',
-            'password': 'qwertyui'
-        }
-        response = session.post('http://localhost:3000/users/signup', data=body)
-        print(response.text)
-
-    def bridgeLoginSerice(self):
-        session = SessionHTTP.getSession()
-        data = {
-            'username': 'bridge',
-            'password': 'qwertyui'
-        }
-        response = session.post('http://localhost:3000/users/login', data=data)
-        self.bearer = 'Bearer ' + response.text
-        print(response.text)
-        print(self.bearer)
-
-    def verifyBridgeService(self):
-        session = SessionHTTP.getSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        response = session.get('http://localhost:3000/users/verify', headers=header)
-        print(response.text)
-
-    def addSlotTest(self):
-        session = SessionHTTP.getSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        data = {
-            'zone': 1,
-            'latitude': 43.9,
-            'longitude': 11.1
-        }
-        response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
-        print(response.text)
-
-    def addSlotList(self):
-        session = SessionHTTP.getSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        for slot in self.slots:
-            data = {
-                'zone': slot[0],  # zone
-                'latitude': slot[2],  # latitude
-                'longitude': slot[3]  # longitude
-            }
-            response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
-            print(response.text)
-
-    def updateSlotState(self, park_id):
-        session = SessionHTTP.getSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        url = 'http://localhost:3000/slots/update_slot_state/' + str(park_id)
-        response = session.post(url, headers=header)
-        print(response.text)
-
-    def deleteSlot(self, park_id):
-        session = SessionHTTP.getSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        url = 'http://localhost:3000/slots/delete_slot/' + str(park_id)
-        response = session.delete(url, headers=header)
-        print(response.text)
-
-    def getSlotState(self, park_id):
-        session = SessionHTTP.getSession()
-        url = 'http://localhost:3000/slots/get_slot_state/' + str(park_id)
-        response = session.get(url)
-        print(response.text)
 
 
 if __name__ == '__main__':
     br = Bridge()
-
-    id = 13
     #br.createBridgeUser()
 
     br.bridgeLoginSerice()
-    br.verifyBridgeService()
-    #br.addSlotList()
-    br.getSlotState(id)
-    br.updateSlotState(id)
-    br.getSlotState(id)
-    br.deleteSlot(id)
-    #br.addSlot()
-    #br.sendData()
-    #br.loop()
+    #br.verifyBridgeService()
+    # br.addSlotList()
+    # br.getSlotState(id)
+    # br.updateSlotState(id)
+    # br.getSlotState(id)
+    # br.deleteSlot(id)
+    # br.addSlot()
+    # br.sendData()
+    br.loop()
     br.ser.close()
