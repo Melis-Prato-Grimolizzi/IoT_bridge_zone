@@ -1,6 +1,4 @@
-# from SX127x.LoRa import LoRa
 import json
-
 import SessionHTTP
 import SessionHTTP as Http
 import serial
@@ -23,11 +21,11 @@ class Bridge:
         self.setupSerial()
         self.getFakeData()
 
+
     def getUser(self):
         session = SessionHTTP.getSession()
         response = session.get('http://localhost:3000/users/')
-        print(response.text)
-
+        print(f"DEBUG: Response for server (Get user): {response.text}")
 
     def createBridgeUser(self):
         session = SessionHTTP.getSession()
@@ -36,9 +34,9 @@ class Bridge:
             'password': 'qwertyui'
         }
         response = session.post('http://localhost:3000/users/signup', data=body)
-        print(response.text)
+        print(f"DEBUG: Response for server (Create user): {response.text}")
 
-    def bridgeLoginSerice(self):
+    def bridgeLoginService(self):
         session = SessionHTTP.getSession()
         data = {
             'username': 'bridge',
@@ -46,8 +44,7 @@ class Bridge:
         }
         response = session.post('http://localhost:3000/users/login', data=data)
         self.bearer = 'Bearer ' + response.text
-        print(response.text)
-        print(self.bearer)
+        print(f"DEBUG: Response for server (Login): {response.text}")
 
     def verifyBridgeService(self):
         session = SessionHTTP.getSession()
@@ -55,7 +52,7 @@ class Bridge:
             'Authorization': self.bearer
         }
         response = session.get('http://localhost:3000/users/verify', headers=header)
-        print(response.text)
+        print(f"DEBUG: Response for server (Verify login): {response.text}")
 
     def addSlotTest(self):
         session = SessionHTTP.getSession()
@@ -68,7 +65,7 @@ class Bridge:
             'longitude': 11.1
         }
         response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
-        print(response.text)
+        print(f"DEBUG: Response for server (Adding slot): {response.text}")
 
     def addSlotList(self):
         session = SessionHTTP.getSession()
@@ -79,11 +76,11 @@ class Bridge:
             data = {
                 'zone': slot[0],  # zone
                 'latitude': slot[2],  # latitude
-                'longitude': slot[3], # longitude
+                'longitude': slot[3],  # longitude
                 'parking_id': slot[1]  # parking_id
             }
             response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
-            print(response.text)
+            print(f"DEBUG: Response for server (Adding slot): {response.text}")
 
     def updateSlotState(self, park_id):
         session = SessionHTTP.getSession()
@@ -92,7 +89,8 @@ class Bridge:
         }
         url = 'http://localhost:3000/slots/update_slot_state/' + str(park_id)
         response = session.post(url, headers=header)
-        print(response.text)
+        print(f"DEBUG: Response for server (Updating slot {park_id}): {response.text}")
+        return response.status_code
 
     def deleteSlot(self, park_id):
         session = SessionHTTP.getSession()
@@ -101,13 +99,13 @@ class Bridge:
         }
         url = 'http://localhost:3000/slots/delete_slot/' + str(park_id)
         response = session.delete(url, headers=header)
-        print(response.text)
+        print(f"DEBUG: Response for server (Deleting slot {park_id}): {response.text}")
 
     def getSlotState(self, park_id):
         session = SessionHTTP.getSession()
         url = 'http://localhost:3000/slots/get_slot_state/' + str(park_id)
         response = session.get(url)
-        print(response.text)
+        print(f"DEBUG: Response for server (Getting slot {park_id} state): {response.text}")
 
     def getFakeData(self):
         with open('slot.json', 'r') as file:
@@ -130,12 +128,6 @@ class Bridge:
                 print(f'{value}\n')
             return data
 
-    def startBridge(self):
-        data = self.getSlotData('http://melis.prato.grimos.dev/parking/')
-
-        # TODO: mandare i dati a tutti i microcontrollori
-        pass
-
     def setupSerial(self):
 
         port_name = None
@@ -143,7 +135,6 @@ class Bridge:
             if self.config.get('Serial', 'PortDescription', fallback='Arduino') in port.description:
                 print(port)
                 port_name = port.device
-
         try:
             print(f'Connecting to {port_name}...')
             self.ser = serial.Serial(port_name, self.config.get('Serial', 'BaudRate', fallback=9600))
@@ -151,7 +142,6 @@ class Bridge:
             print(f'Error occurred while connecting to {port_name}')
             print('Error:', e)
             return None
-
         time.sleep(2)
         print(f'Connect to {port_name}!')
 
@@ -170,46 +160,52 @@ class Bridge:
             self.ser.write(msg)
             print(msg)
 
-        print('Finito!')
+    def readFloatData(self):
+        time.sleep(0.01)
+        id_b = self.ser.read()
+        print('ID: ', id_b[0])
+        zone = self.ser.read()
+        print('Zone: ', zone[0])
+        if self.ser.in_waiting >= 4:
+            lat_data = self.ser.read(4)  # reading 4 bytes for lat
+            lat = struct.unpack('<f', lat_data)[0]  # decoding in float
+            print('Lat: ', lat)
+        if self.ser.in_waiting >= 4:
+            lon_data = self.ser.read(4)  # reading 4 bytes for lon
+            lon = struct.unpack('<f', lon_data)[0]  # decoding in float
+            print('Lon: ', lon)
 
     def loop(self):
-        while True:
-            if self.ser.in_waiting > 0:
-                time.sleep(0.1)
-                id = self.ser.read()
-                id_int = int.from_bytes(id)
-                print(f'ID: {id_int}\n')
-                print('Entrato')
-                self.updateSlotState(id_int)
-                '''
-                time.sleep(0.01)
-                id = self.ser.read()
-                print('ID: ', id[0])
-                zone = self.ser.read()
-                print('Zone: ', zone[0])
-                if self.ser.in_waiting >= 4:
-                    lat_data = self.ser.read(4)  # Legge i 4 byte per lat
-                    lat = struct.unpack('<f', lat_data)[0]  # Decodifica in float
-                    print('Lat: ', lat)
-                if self.ser.in_waiting >= 4:
-                    lon_data = self.ser.read(4)  # Legge i 4 byte per lon
-                    lon = struct.unpack('<f', lon_data)[0]  # Decodifica in float
-                    print('Lon: ', lon)
-                error = self.ser.read()
-                print('CODE: ', error[0])
-                '''
+        print("Loop is starting...")
+        try:
+            while True:
+                # if there is data to read, read it
+                if self.ser is not None and self.ser.is_open and self.ser.in_waiting > 0:
+                    time.sleep(0.1)
+                    id_b = self.ser.read()
+                    id_int = int.from_bytes(id_b)
+                    print(f'Trying to update slot {id_int}...\n')
+                    status_code = self.updateSlotState(id_int)
+                    if status_code == 200:
+                        print(f'Slot {id_int} updated!')
+                    else:
+                        print(f'Error updating slot {id_int}!')
+        except KeyboardInterrupt:
+            print("Exiting...")
+            self.ser.close()
+            print("Serial port closed!")
 
 
 
 if __name__ == '__main__':
     br = Bridge()
-    #br.createBridgeUser()
-
-    br.bridgeLoginSerice()
-    #br.verifyBridgeService()
+    br.bridgeLoginService()
+    # br.verifyBridgeService()
+    # br.getUser()
     # br.addSlotList()
-    # br.getSlotState(id)
-    # br.updateSlotState(id)
+    # br.getSlotState(5)
+    # br.updateSlotState(5)
+    # br.getSlotState(5)
     # br.getSlotState(id)
     # br.deleteSlot(id)
     # br.addSlot()
