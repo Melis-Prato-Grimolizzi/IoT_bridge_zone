@@ -1,4 +1,6 @@
 import json
+import threading
+
 import SessionHTTP
 import SessionHTTP as Http
 import serial
@@ -6,6 +8,41 @@ import configparser
 import serial.tools.list_ports
 import struct
 import time
+
+
+class Daemon:
+    def __init__(self, bearer):
+        self.bearer = bearer
+
+    def getData(self):
+        config = configparser.ConfigParser()
+        url = config['Urls']['GetUrl']
+        session = Http.getDaemonSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        response = session.get(url, headers=header)
+        return response.json().to_dict()
+
+    def sendData(self, data):
+        config = configparser.ConfigParser()
+        url = config['Urls']['PostUrl']
+        session = Http.getDaemonSession()
+        header = {
+            'Authorization': self.bearer
+        }
+        response = session.post(url,headers=header, data=data)
+        return response.json().to_dict()
+
+    def collector(self):
+        timestamp = time.time()
+        while True:
+            if time.time() - timestamp >= 600:
+                timestamp = time.time()
+                print("Daje roma!")
+                # data = self.getData()
+                # self.sendData(data)
+
 
 class Bridge:
 
@@ -20,6 +57,8 @@ class Bridge:
 
         self.setupSerial()
         self.getFakeData()
+
+
 
 
     def getUser(self):
@@ -160,7 +199,7 @@ class Bridge:
             self.ser.write(msg)
             print(msg)
 
-    def readFloatData(self):
+    def readSerialFloatData(self):
         time.sleep(0.01)
         id_b = self.ser.read()
         print('ID: ', id_b[0])
@@ -180,16 +219,17 @@ class Bridge:
         try:
             while True:
                 # if there is data to read, read it
-                if self.ser is not None and self.ser.is_open and self.ser.in_waiting > 0:
-                    time.sleep(0.1)
-                    id_b = self.ser.read()
-                    id_int = int.from_bytes(id_b)
-                    print(f'Trying to update slot {id_int}...\n')
-                    status_code = self.updateSlotState(id_int)
-                    if status_code == 200:
-                        print(f'Slot {id_int} updated!')
-                    else:
-                        print(f'Error updating slot {id_int}!')
+                time.sleep(0.1)
+                # if self.ser is not None and self.ser.is_open and self.ser.in_waiting > 0:
+                #     time.sleep(0.1)
+                #     id_b = self.ser.read()
+                #     id_int = int.from_bytes(id_b)
+                #     print(f'Trying to update slot {id_int}...\n')
+                #     status_code = self.updateSlotState(id_int)
+                #     if status_code == 200:
+                #         print(f'Slot {id_int} updated!')
+                #     else:
+                #         print(f'Error updating slot {id_int}!')
         except KeyboardInterrupt:
             print("Exiting...")
             self.ser.close()
@@ -198,8 +238,15 @@ class Bridge:
 
 
 if __name__ == '__main__':
+
+
     br = Bridge()
     br.bridgeLoginService()
+
+    d = Daemon(br.bearer)
+
+    thread = threading.Thread(target=d.collector(), daemon=True)
+    thread.start()
     # br.verifyBridgeService()
     # br.getUser()
     # br.addSlotList()

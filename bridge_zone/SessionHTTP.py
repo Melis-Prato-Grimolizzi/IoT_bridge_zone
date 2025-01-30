@@ -1,10 +1,12 @@
 import requests
 
 session = requests.Session()
+daemonSession = requests.Session()
 print("Session created!")
 
 def getSession():
     return session
-    
-def test():
-    pass
+
+def getDaemonSession():
+    return daemonSession
+
