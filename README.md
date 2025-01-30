@@ -10,5 +10,5 @@ This bridge build up the connection beetween our parking sensor and our backend
 - the collector daemon is started; it collects periodically the state of all parking slot, and then it post it into an history table
 - now our bridge goes in the loop where it continuously look for data from the serial channel
 
-##Update Parking slot
+## Update Parking slot
 The major feature of our bridge is the updating of slot state. It is done by waiting from serial data, then parsing the byte readed and contacting the server to update the slot's state
