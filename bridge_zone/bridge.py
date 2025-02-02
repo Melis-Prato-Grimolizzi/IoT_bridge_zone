@@ -10,40 +10,6 @@ import struct
 import time
 
 
-class Daemon:
-    def __init__(self, bearer):
-        self.bearer = bearer
-
-    def getData(self):
-        config = configparser.ConfigParser()
-        url = config['Urls']['GetUrl']
-        session = Http.getDaemonSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        response = session.get(url, headers=header)
-        return response.json().to_dict()
-
-    def sendData(self, data):
-        config = configparser.ConfigParser()
-        url = config['Urls']['PostUrl']
-        session = Http.getDaemonSession()
-        header = {
-            'Authorization': self.bearer
-        }
-        response = session.post(url,headers=header, data=data)
-        return response.json().to_dict()
-
-    def collector(self):
-        timestamp = time.time()
-        while True:
-            if time.time() - timestamp >= 600:
-                timestamp = time.time()
-                print("Daje roma!")
-                # data = self.getData()
-                # self.sendData(data)
-
-
 class Bridge:
 
     def __init__(self):
@@ -58,43 +24,43 @@ class Bridge:
         self.setupSerial()
         self.getFakeData()
 
-
-
-
-    def getUser(self):
-        session = SessionHTTP.getSession()
-        response = session.get('http://localhost:3000/users/')
-        print(f"DEBUG: Response for server (Get user): {response.text}")
-
     def createBridgeUser(self):
         session = SessionHTTP.getSession()
+        username = self.config['Account']['username']
+        password = self.config['Account']['password']
+        create_bridge_url = self.config['Urls']['CreateBridge']
         body = {
-            'username': 'bridge',
-            'password': 'qwertyui'
+            'username': username,
+            'password': password
         }
-        response = session.post('http://localhost:3000/users/signup', data=body)
+        response = session.post('create_bridge_url', data=body)
         print(f"DEBUG: Response for server (Create user): {response.text}")
 
     def bridgeLoginService(self):
         session = SessionHTTP.getSession()
+        username = self.config['Account']['username']
+        password = self.config['Account']['password']
+        login_bridge_url = self.config['Urls']['LoginBridge']
         data = {
-            'username': 'bridge',
-            'password': 'password'
+            'username': username,
+            'password': password
         }
-        response = session.post('http://localhost:3000/users/login', data=data)
+        response = session.post(login_bridge_url, data=data)
         self.bearer = 'Bearer ' + response.text
         print(f"DEBUG: Response for server (Login): {response.text}")
 
     def verifyBridgeService(self):
         session = SessionHTTP.getSession()
+        verify_bridge_url = self.config['Urls']['VerifyBridge']
         header = {
             'Authorization': self.bearer
         }
-        response = session.get('http://localhost:3000/users/verify', headers=header)
+        response = session.get(verify_bridge_url, headers=header)
         print(f"DEBUG: Response for server (Verify login): {response.text}")
 
     def addSlotTest(self):
         session = SessionHTTP.getSession()
+        add_slot_url = self.config['Urls']['AddSlot']
         header = {
             'Authorization': self.bearer
         }
@@ -103,11 +69,12 @@ class Bridge:
             'latitude': 43.9,
             'longitude': 11.1
         }
-        response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+        response = session.post(add_slot_url, headers=header, data=data)
         print(f"DEBUG: Response for server (Adding slot): {response.text}")
 
     def addSlotList(self):
         session = SessionHTTP.getSession()
+        add_slot_url = self.config['Urls']['AddSlot']
         header = {
             'Authorization': self.bearer
         }
@@ -118,54 +85,40 @@ class Bridge:
                 'longitude': slot[3],  # longitude
                 'parking_id': slot[1]  # parking_id
             }
-            response = session.post('http://localhost:3000/slots/add_slot', headers=header, data=data)
+            response = session.post(add_slot_url, headers=header, data=data)
             print(f"DEBUG: Response for server (Adding slot): {response.text}")
 
     def updateSlotState(self, park_id):
         session = SessionHTTP.getSession()
+        update_slot_url = self.config['Urls']['UpdateSlot']
         header = {
             'Authorization': self.bearer
         }
-        url = 'http://localhost:3000/slots/update_slot_state/' + str(park_id)
+        url = update_slot_url + str(park_id)
         response = session.post(url, headers=header)
         print(f"DEBUG: Response for server (Updating slot {park_id}): {response.text}")
         return response.status_code
 
     def deleteSlot(self, park_id):
         session = SessionHTTP.getSession()
+        delete_slot_url = self.config['Urls']['DeleteSlot']
         header = {
             'Authorization': self.bearer
         }
-        url = 'http://localhost:3000/slots/delete_slot/' + str(park_id)
+        url = delete_slot_url + str(park_id)
         response = session.delete(url, headers=header)
         print(f"DEBUG: Response for server (Deleting slot {park_id}): {response.text}")
 
     def getSlotState(self, park_id):
         session = SessionHTTP.getSession()
-        url = 'http://localhost:3000/slots/get_slot_state/' + str(park_id)
+        get_slot_state_url = self.config['Urls']['GetSlotState']
+        url = get_slot_state_url + str(park_id)
         response = session.get(url)
         print(f"DEBUG: Response for server (Getting slot {park_id} state): {response.text}")
 
     def getFakeData(self):
         with open('slot.json', 'r') as file:
             self.slots = json.load(file)
-
-    def getSlotData(self, uri):
-        # http://melis.prato.grimos.dev/parking/
-        session = Http.getSession()
-        header = {
-            'Content-Type': 'application/json'
-        }
-        response = session.get(uri, headers=header)
-        if response.status_code != 200:
-            print(f"Error: {response.status_code} - {response.text}")
-            return None
-        else:
-            data = response.json().to_dict()
-            print('Data:')
-            for value in data:
-                print(f'{value}\n')
-            return data
 
     def setupSerial(self):
 
@@ -220,34 +173,27 @@ class Bridge:
             while True:
                 # if there is data to read, read it
                 time.sleep(0.1)
-                # if self.ser is not None and self.ser.is_open and self.ser.in_waiting > 0:
-                #     time.sleep(0.1)
-                #     id_b = self.ser.read()
-                #     id_int = int.from_bytes(id_b)
-                #     print(f'Trying to update slot {id_int}...\n')
-                #     status_code = self.updateSlotState(id_int)
-                #     if status_code == 200:
-                #         print(f'Slot {id_int} updated!')
-                #     else:
-                #         print(f'Error updating slot {id_int}!')
+                if self.ser is not None and self.ser.is_open and self.ser.in_waiting > 0:
+                    time.sleep(0.1)
+                    id_b = self.ser.read()
+                    id_int = int.from_bytes(id_b)
+                    print(f'Trying to update slot {id_int}...\n')
+                    status_code = self.updateSlotState(id_int)
+                    if status_code == 200:
+                        print(f'Slot {id_int} updated!')
+                    else:
+                        print(f'Error updating slot {id_int}!')
         except KeyboardInterrupt:
             print("Exiting...")
             self.ser.close()
             print("Serial port closed!")
 
 
-
 if __name__ == '__main__':
-
-
     br = Bridge()
     br.bridgeLoginService()
+    br.verifyBridgeService()
 
-    d = Daemon(br.bearer)
-
-    thread = threading.Thread(target=d.collector(), daemon=True)
-    thread.start()
-    # br.verifyBridgeService()
     # br.getUser()
     # br.addSlotList()
     # br.getSlotState(5)
@@ -257,5 +203,5 @@ if __name__ == '__main__':
     # br.deleteSlot(id)
     # br.addSlot()
     # br.sendData()
+
     br.loop()
-    br.ser.close()
